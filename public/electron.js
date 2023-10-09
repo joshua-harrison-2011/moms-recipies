@@ -76,12 +76,6 @@ app.setPath(
 app.whenReady().then(() => {
 
   ipcMain.handle("ping", async () => {
-    // db.all('select * FROM recipe', [], function(err, rows){
-    //   console.log("tables 1");
-    //   console.log("err", err);
-    //   console.log(rows, rows)
-    // });
-    // console.log(rows);
     return "Pong from electron.js";
   });
 
