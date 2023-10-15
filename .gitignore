@@ -2,6 +2,7 @@
 /dist
 /yarn.lock
 /userdata
+/out
 
 # dependencies
 /node_modules
