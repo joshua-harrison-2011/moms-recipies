@@ -1,8 +1,12 @@
+/* eslint-disable react/prop-types */
 import React from 'react';
 
 import {
+  ActionButton,
   Cell,
   Column,
+  DialogTrigger,
+  Flex,
   Item,
   Picker,
   Row,
@@ -10,9 +14,6 @@ import {
   TableView,
   TableBody,
   TableHeader,
-
-  Flex,
-  ActionButton,
   Tooltip,
   TooltipTrigger,
 } from '@adobe/react-spectrum';
@@ -20,14 +21,16 @@ import {
 import Edit from '@spectrum-icons/workflow/Edit';
 import Note from '@spectrum-icons/workflow/Note';
 import Recipe from './Recipe';
+import AddEditRecipeDialog from './AddEditRecipeDialog';
 
 const columns = [
-  { name: 'Name', uid: 'name' },
+  //  { name: 'Id', uid: 'id', width: '10%' },
+  { name: 'Name', uid: 'name', width: '45%' },
   { name: 'Category', uid: 'category' },
   { name: 'Magazine', uid: 'magazine' },
-  { name: 'Page', uid: 'page' },
-  { name: 'Notes', uid: 'notes' },
-  { name: 'Actions', uid: 'actions', hideHeader: true}
+  { name: 'Page', uid: 'page', width: '10%' },
+  { name: 'Notes', uid: 'notes', width: '10%' },
+  { name: 'Actions', uid: 'actions', hideHeader: true },
 ];
 
 // eslint-disable-next-line react/prop-types
@@ -35,6 +38,7 @@ export default function RecipeList({
   recipes,
   categoryOptions,
   magazineOptions,
+  triggerRecipeRefresh,
 }) {
   const [height, setHeight] = React.useState(0);
   const [search, setSearch] = React.useState('');
@@ -42,8 +46,16 @@ export default function RecipeList({
   const [magazine, setMagazine] = React.useState(null);
 
   const filteredRecipes = React.useMemo(() => {
+    const searchLower = search.toLocaleLowerCase();
+
     // eslint-disable-next-line react/prop-types
     return recipes.filter((recipe: Recipe) => {
+      if (
+        searchLower &&
+        recipe.name.toLocaleLowerCase().indexOf(searchLower) === -1
+      ) {
+        return false;
+      }
       if (category && category !== recipe.category) {
         return false;
       }
@@ -52,7 +64,7 @@ export default function RecipeList({
       }
       return true;
     });
-  }, [recipes, category, magazine]);
+  }, [recipes, category, magazine, search]);
 
   const recalculateHeight = React.useCallback(() => {
     setHeight(window.innerHeight - document.getElementById("recipe-table").offsetTop - 30);
@@ -60,27 +72,21 @@ export default function RecipeList({
 
   React.useEffect(() => {
     recalculateHeight();
-    window.addEventListener("resize", recalculateHeight);
-    return () => window.removeEventListener(recalculateHeight);
+    window.addEventListener('resize', recalculateHeight);
+    return () => window.removeEventListener('resize', recalculateHeight);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
     <Flex direction="column" width="100%" gap="size-100" marginTop="size-200">
       <Flex direction="row" gap="size-225">
-        <SearchField
-          label="Search"
-          value={search}
-          onChange={setSearch}
-          onSubmit={() => console.log('submitting')}
-          onFocusChange={() => console.log('focus')}
-        />
+        <SearchField label="Search" value={search} onChange={setSearch} />
         <Picker
           label="Category"
           items={categoryOptions}
           selectedKey={category}
           onSelectionChange={setCategory}
         >
-          <Item key="">All</Item>
           {(item: any) => <Item key={item.id}>{item.name}</Item>}
         </Picker>
         <Picker
@@ -89,9 +95,18 @@ export default function RecipeList({
           selectedKey={magazine}
           onSelectionChange={setMagazine}
         >
-          <Item key="">All</Item>
           {(item: any) => <Item key={item.id}>{item.name}</Item>}
         </Picker>
+        <ActionButton
+          alignSelf="end"
+          onPress={() => {
+            setSearch('');
+            setMagazine(null);
+            setCategory(null);
+          }}
+        >
+          Reset
+        </ActionButton>
       </Flex>
       <TableView
         aria-label="Recipes"
@@ -101,7 +116,11 @@ export default function RecipeList({
       >
         <TableHeader columns={columns}>
           {(column) => (
-            <Column key={column.uid} hideHeader={column.hideHeader}>
+            <Column
+              key={column.uid}
+              hideHeader={column.hideHeader}
+              width={column.width}
+            >
               {column.name}
             </Column>
           )}
@@ -124,14 +143,31 @@ export default function RecipeList({
                         </Cell>
                       );
                     }
-                    return <Cell><span /></Cell>;
+                    return (
+                      <Cell>
+                        <span />
+                      </Cell>
+                    );
                   }
                   if (columnKey === 'actions') {
                     return (
                       <Cell>
-                        <ActionButton isQuiet>
-                          <Edit />
-                        </ActionButton>
+                        <DialogTrigger type="modal">
+                          <ActionButton isQuiet>
+                            <Edit />
+                          </ActionButton>
+                          {(close) => (
+                            <AddEditRecipeDialog
+                              recipe={item}
+                              close={() => {
+                                triggerRecipeRefresh();
+                                close();
+                              }}
+                              categoryOptions={categoryOptions}
+                              magazineOptions={magazineOptions}
+                            />
+                          )}
+                        </DialogTrigger>
                       </Cell>
                     );
                   }

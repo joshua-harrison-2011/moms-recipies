@@ -1,52 +1,66 @@
 import React from 'react';
 
-import { darkTheme, Provider, Flex, ActionButton } from '@adobe/react-spectrum';
+import {
+  darkTheme,
+  ActionButton,
+  DialogTrigger,
+  Flex,
+  Provider,
+} from '@adobe/react-spectrum';
+
+import { ToastContainer } from '@react-spectrum/toast';
 
 import Recipe from './Recipe';
 import RecipeList from './RecipeList';
-import AddEditRecipe from './AddEditRecipe';
+import AddEditRecipeDialog from './AddEditRecipeDialog';
 
 import './App.css';
 
 export default function App() {
   const [recipes, setRecipes] = React.useState([]);
+  const [refreshRecipes, setRefreshRecipes] = React.useState(new Date());
+  const triggerRecipeRefresh = React.useCallback(() => {
+    setRefreshRecipes(new Date());
+  }, []);
 
+  // Load the recipes through the electron bridge
   React.useEffect(() => {
-    window.electron.recipes
+    window.electron.recipeApi
       .getAllRecipies()
       .then(setRecipes)
       .catch(console.error);
-  }, []);
+  }, [refreshRecipes]);
 
+  // When the recipes change, update the list of categories
   const categoryOptions = React.useMemo(() => {
     const items = Array.from(new Set(recipes.map((r: Recipe) => r.category)));
-    items.sort(function (a, b) {
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    });
+    items.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
     return items.map((m) => ({
       id: m,
       name: m,
     }));
   }, [recipes]);
 
+  // When the recipes change, update the list of magazines
   const magazineOptions = React.useMemo(() => {
     const items = Array.from(new Set(recipes.map((r: Recipe) => r.magazine)));
-    items.sort(function (a, b) {
-      return a.toLowerCase().localeCompare(b.toLowerCase());
-    });
+    items.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+
     return items.map((m) => ({
       id: m,
       name: m,
     }));
-  }, [recipes]);
-
-  const filteredRecipies = React.useMemo(() => {
-    return [...recipes];
   }, [recipes]);
 
   return (
     <Provider theme={darkTheme}>
-      <Flex direction="column" marginStart="size-300" marginEnd="size-300">
+      <Flex
+        direction="column"
+        marginStart="size-300"
+        marginEnd="size-300"
+        height="100vh"
+      >
         <Flex
           direction="row"
           justifyContent="space-between"
@@ -54,15 +68,30 @@ export default function App() {
           marginTop="size-300"
         >
           <div id="title">{`Mom's Recipes`}</div>
-          <ActionButton>New Recipe</ActionButton>
+          <DialogTrigger type="modal">
+            <ActionButton>New Recipe</ActionButton>
+            {(close: Function) => (
+              <AddEditRecipeDialog
+                recipe={undefined}
+                close={() => {
+                  triggerRecipeRefresh();
+                  close();
+                }}
+                categoryOptions={categoryOptions}
+                magazineOptions={magazineOptions}
+              />
+            )}
+          </DialogTrigger>
         </Flex>
 
         <RecipeList
-          recipes={filteredRecipies}
+          recipes={recipes}
           categoryOptions={categoryOptions}
           magazineOptions={magazineOptions}
+          triggerRecipeRefresh={triggerRecipeRefresh}
         />
       </Flex>
+      <ToastContainer />
     </Provider>
   );
 }

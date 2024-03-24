@@ -15,7 +15,7 @@ import { app, BrowserWindow, shell, ipcMain, nativeTheme } from 'electron';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
 
-import Recipes from './recipes';
+import RecipeCsvApi, { NewRecipe, Recipe } from './recipeCsvApi';
 
 // class AppUpdater {
 //   constructor() {
@@ -126,7 +126,6 @@ const createWindow = async () => {
 /**
  * Add event listeners...
  */
-
 app.on('window-all-closed', () => {
   // Respect the OSX convention of having the application in memory even
   // after all windows have been closed
@@ -147,65 +146,43 @@ app
   })
   .catch(console.log);
 
-const recipes = new Recipes(getAssetPath('db/recipes.csv'));
+const recipeApi = new RecipeCsvApi(
+  getAssetPath('db/recipes.csv'),
+  getAssetPath('db/recipes-orig.csv'),
+);
 ipcMain.handle('ping', async () => {
   return 'Pong from electron.js';
 });
 
 ipcMain.handle('get-all-recipies', async () => {
-  return recipes.getRecipes();
+  return recipeApi.getRecipes();
 });
 
-const validateRecipe = (recipe: any) => {
-  if (!recipe.name || recipe.name.length < 1) {
-    throw new Error('Invalid recipe name');
-  }
-  if (!recipe.magazine || recipe.magazine.length < 1) {
-    throw new Error('Invalid magazine name');
-  }
-  if (!recipe.page || recipe.page < 1) {
-    throw new Error('Invalid page');
-  }
-  if (!recipe.category || recipe.category.length < 1) {
-    throw new Error('Invalid category name');
-  }
-};
-
-ipcMain.handle('add-recipe', async (event, recipe) => {
-  validateRecipe(recipe);
-  await dbQueryAll(
-    'INSERT INTO recipe (name, magazine, page, category, notes) VALUES (?, ?, ?, ?, ?)',
-    [recipe.name, recipe.magazine, recipe.page, recipe.category, recipe.notes],
-  );
-});
-
-ipcMain.handle('delete-recipe', async (event, recipeId) => {
-  if (!recipeId) {
+ipcMain.handle('update-recipe', async (event, updateRecipe: Recipe) => {
+  if (!updateRecipe.id) {
     throw new Error('Invalid recipe id');
   }
-  await dbQueryAll('DELETE FROM recipe WHERE id = ?, ?', [recipeId]);
+  recipeApi.validateRecipe(updateRecipe);
+
+  const recipes = await recipeApi.getRecipes();
+  const updateRecipes = recipes.map((recipe) => {
+    if (recipe.id === updateRecipe.id) {
+      return updateRecipe;
+    }
+    return recipe;
+  });
+
+  return recipeApi.saveRecipes(updateRecipes);
 });
 
-ipcMain.handle('update-recipe', async (event, recipeId, recipe) => {
-  if (!recipeId) {
-    throw new Error('Invalid recipe id');
-  }
-  validateRecipe(recipe);
+ipcMain.handle('add-recipe', async (event, newRecipe: NewRecipe) => {
+  recipeApi.validateRecipe(newRecipe);
 
-  await dbQueryAll(
-    'UPDATE recipe SET name = ?, magazine = ?, page = ?, category = ?, notes = ? WHERE id = ?',
-    [
-      recipe.name,
-      recipe.magazine,
-      recipe.page,
-      recipe.category,
-      recipe.notes,
-      recipeId,
-    ],
-  );
+  const recipes = await recipeApi.getRecipes();
+  recipes.push({
+    id: recipes[recipes.length - 1].id + 1,
+    ...newRecipe,
+  });
+
+  return recipeApi.saveRecipes(recipes);
 });
-
-// const r = new Recipes(getAssetPath('db/recipes.csv'));
-// r.getRecipes()
-//   .then((rows) => console.dir(rows))
-//   .catch((e) => console.error(e));
