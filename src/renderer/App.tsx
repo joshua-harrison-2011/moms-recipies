@@ -12,7 +12,7 @@ import { ToastContainer } from '@react-spectrum/toast';
 
 import Recipe from './Recipe';
 import RecipeList from './RecipeList';
-import AddEditRecipeDialog from './AddEditRecipeDialog';
+// import AddEditRecipeDialog from './AddEditRecipeDialog';
 
 import './App.css';
 
@@ -68,7 +68,7 @@ export default function App() {
           marginTop="size-300"
         >
           <div id="title">{`Mom's Recipes`}</div>
-          <DialogTrigger type="modal">
+          {/* <DialogTrigger type="modal">
             <ActionButton>New Recipe</ActionButton>
             {(close: Function) => (
               <AddEditRecipeDialog
@@ -81,7 +81,7 @@ export default function App() {
                 magazineOptions={magazineOptions}
               />
             )}
-          </DialogTrigger>
+          </DialogTrigger> */}
         </Flex>
 
         <RecipeList

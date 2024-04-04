@@ -30,7 +30,7 @@ const columns = [
   { name: 'Magazine', uid: 'magazine' },
   { name: 'Page', uid: 'page', width: '10%' },
   { name: 'Notes', uid: 'notes', width: '10%' },
-  { name: 'Actions', uid: 'actions', hideHeader: true },
+  // { name: 'Actions', uid: 'actions', hideHeader: true },
 ];
 
 // eslint-disable-next-line react/prop-types

@@ -1,15 +1,18 @@
 import React from 'react';
 import {
+  ActionButton,
   Button,
   ButtonGroup,
+  ComboBox,
   Content,
   Dialog,
   Divider,
+  Flex,
   Form,
   Heading,
   Item,
+  Link,
   NumberField,
-  Picker,
   TextArea,
   TextField,
 } from '@adobe/react-spectrum';
@@ -29,13 +32,32 @@ export default function AddEditRecipeDialog({
 }) {
   const [name, setName] = React.useState(recipe?.name || '');
   const [magazine, setMagazine] = React.useState(recipe?.magazine || '');
+  const [newMagazine, setNewMagazine] = React.useState('');
   const [category, setCategory] = React.useState(recipe?.category || '');
+  const [newCategory, setNewCategory] = React.useState('');
   const [page, setPage] = React.useState(recipe?.page || 0);
   const [notes, setNotes] = React.useState(recipe?.notes || '');
 
   const nameIsValid = React.useMemo(() => name.length > 0, [name]);
-  const magazineIsValid = React.useMemo(() => magazine.length > 0, [magazine]);
-  const categoryIsValid = React.useMemo(() => category.length > 0, [category]);
+  const magazineIsValid = React.useMemo(
+    () => magazine && magazine.length > 0,
+    [magazine],
+  );
+  const [magazineIsNew, setMagazineIsNew] = React.useState(false);
+  const newMagazineIsValid = React.useMemo(
+    () => newMagazine && newMagazine.length > 0,
+    [newMagazine],
+  );
+
+  const categoryIsValid = React.useMemo(
+    () => category && category.length > 0,
+    [category],
+  );
+  const [categoryIsNew, setCategoryIsNew] = React.useState(false);
+  const newCategoryIsValid = React.useMemo(
+    () => newCategory && newCategory.length > 0,
+    [newCategory],
+  );
   const pageIsValid = React.useMemo(() => page > 0, [page]);
 
   return (
@@ -43,17 +65,49 @@ export default function AddEditRecipeDialog({
       <Heading>{recipe ? 'Update Recipe' : 'Create Recipe'}</Heading>
       <Divider />
       <Content>
-        <Form maxWidth="size-3600">
+        <Form maxWidth="size-4600">
           <TextField label="Name" value={name} onChange={setName} isRequired />
-          <Picker
-            label="Magazine"
-            items={magazineOptions}
-            onSelectionChange={setMagazine}
-            selectedKey={magazine}
-            isRequired
-          >
-            {(item: any) => <Item key={item.id}>{item.name}</Item>}
-          </Picker>
+          <Flex direction="row" gap="size-200">
+            {magazineIsNew && (
+              <>
+                <TextField
+                  label="New Magazine"
+                  value={newMagazine}
+                  onChange={setNewMagazine}
+                  isRequired
+                  flexGrow={1}
+                />
+                <ActionButton
+                  isQuiet
+                  alignSelf="end"
+                  onPress={() => setMagazineIsNew(false)}
+                >
+                  Use Existing
+                </ActionButton>
+              </>
+            )}
+            {!magazineIsNew && (
+              <>
+                <ComboBox
+                  label="Magazine"
+                  defaultItems={magazineOptions}
+                  onSelectionChange={setMagazine}
+                  selectedKey={magazine}
+                  isRequired
+                  flexGrow={1}
+                >
+                  {(item: any) => <Item key={item.id}>{item.name}</Item>}
+                </ComboBox>
+                <ActionButton
+                  isQuiet
+                  alignSelf="end"
+                  onPress={() => setMagazineIsNew(true)}
+                >
+                  Add New
+                </ActionButton>
+              </>
+            )}
+          </Flex>
           <NumberField
             label="Page"
             minValue={0}
@@ -61,15 +115,47 @@ export default function AddEditRecipeDialog({
             onChange={setPage}
             isRequired
           />
-          <Picker
-            label="Category"
-            items={categoryOptions}
-            onSelectionChange={setCategory}
-            selectedKey={category}
-            isRequired
-          >
-            {(item: any) => <Item key={item.id}>{item.name}</Item>}
-          </Picker>
+          <Flex direction="row" gap="size-200">
+            {categoryIsNew && (
+              <>
+                <TextField
+                  label="New Category"
+                  value={newCategory}
+                  onChange={setNewCategory}
+                  isRequired
+                  flexGrow={1}
+                />
+                <ActionButton
+                  isQuiet
+                  alignSelf="end"
+                  onPress={() => setCategoryIsNew(false)}
+                >
+                  Use Existing
+                </ActionButton>
+              </>
+            )}
+            {!categoryIsNew && (
+              <>
+                <ComboBox
+                  label="Category"
+                  defaultItems={categoryOptions}
+                  onSelectionChange={setCategory}
+                  selectedKey={category}
+                  isRequired
+                  flexGrow={1}
+                >
+                  {(item: any) => <Item key={item.id}>{item.name}</Item>}
+                </ComboBox>
+                <ActionButton
+                  isQuiet
+                  alignSelf="end"
+                  onPress={() => setCategoryIsNew(true)}
+                >
+                  Add New
+                </ActionButton>
+              </>
+            )}
+          </Flex>
           <TextArea label="Notes" value={notes} onChange={setNotes} />
         </Form>
       </Content>
@@ -81,15 +167,20 @@ export default function AddEditRecipeDialog({
           autoFocus
           variant="accent"
           isDisabled={
-            !nameIsValid || !magazineIsValid || !categoryIsValid || !pageIsValid
+            !nameIsValid ||
+            (magazine && !magazineIsValid) ||
+            (newMagazine && !newMagazineIsValid) ||
+            !categoryIsValid ||
+            (newCategory && !newCategoryIsValid) ||
+            !pageIsValid
           }
           onPress={() => {
             if (recipe === null) {
               window.electron.recipeApi
                 .addRecipe({
                   name,
-                  magazine,
-                  category,
+                  magazine: magazineIsNew ? newMagazine : magazine,
+                  category: categoryIsNew ? newCategory : category,
                   page,
                   notes,
                 })
@@ -112,8 +203,8 @@ export default function AddEditRecipeDialog({
                 .updateRecipe({
                   id: recipe.id,
                   name,
-                  magazine,
-                  category,
+                  magazine: magazineIsNew ? newMagazine : magazine,
+                  category: categoryIsNew ? newCategory : category,
                   page,
                   notes,
                 })
@@ -138,34 +229,3 @@ export default function AddEditRecipeDialog({
     </Dialog>
   );
 }
-
-// export default function AddEditRecipe({
-//   recipe,
-//   magazineOptions,
-//   categoryOptions,
-// }) {
-//   const [magazine, setMagazine] = React.useState(recipe?.magazine || '');
-//   const [category, setCategory] = React.useState(recipe?.category || '');
-
-//   return (
-    // <Form maxWidth="size-3600">
-    //   <TextField label="Name" />
-    //   <Picker
-    //     label="Magazine"
-    //     items={magazineOptions}
-    //     onSelectionChange={setMagazine}
-    //   >
-    //     {(item: any) => <Item key={item.id}>{item.name}</Item>}
-    //   </Picker>
-    //   <NumberField label="Page" minValue={0} />
-    //   <Picker
-    //     label="Category"
-    //     items={magazineOptions}
-    //     onSelectionChange={setCategory}
-    //   >
-    //     {(item: any) => <Item key={item.id}>{item.name}</Item>}
-    //   </Picker>
-    //   <TextArea label="Notes" />
-    // </Form>
-//   );
-// }
